@@ -124,7 +124,7 @@ __mode1__ = [
     OBDCommand("ABSOLUTE_LOAD"              , "Absolute load value"                     , b"0143", 4, absolute_load,         ECU.ENGINE, True),
     OBDCommand("COMMANDED_EQUIV_RATIO"      , "Commanded equivalence ratio"             , b"0144", 4, uas(0x1E),             ECU.ENGINE, True),
     OBDCommand("RELATIVE_THROTTLE_POS"      , "Relative throttle position"              , b"0145", 3, percent,               ECU.ENGINE, True),
-    OBDCommand("AMBIANT_AIR_TEMP"           , "Ambient air temperature"                 , b"0146", 3, temp,                  ECU.ENGINE, True),
+    OBDCommand("AMBIENT_AIR_TEMP"           , "Ambient air temperature"                 , b"0146", 3, temp,                  ECU.ENGINE, True),
     OBDCommand("THROTTLE_POS_B"             , "Absolute throttle position B"            , b"0147", 3, percent,               ECU.ENGINE, True),
     OBDCommand("THROTTLE_POS_C"             , "Absolute throttle position C"            , b"0148", 3, percent,               ECU.ENGINE, True),
     OBDCommand("ACCELERATOR_POS_D"          , "Accelerator pedal position D"            , b"0149", 3, percent,               ECU.ENGINE, True),
@@ -152,7 +152,7 @@ __mode1__ = [
     OBDCommand("EMISSION_REQ"               , "Designed emission requirements"          , b"015F", 3, drop,                  ECU.ENGINE, True),
 ]
 
-# mode 2 is the same as mode 1, but returns values from when the DTC occured
+# mode 2 is the same as mode 1, but returns values from when the DTC occurred
 __mode2__ = []
 for c in __mode1__:
     c = c.clone()
@@ -389,16 +389,16 @@ class Commands():
         return getters
 
     def has_command(self, c):
-        """ checks for existance of a command by OBDCommand object """
+        """ checks for existence of a command by OBDCommand object """
         return c in self.__dict__.values()
 
     def has_name(self, name):
-        """ checks for existance of a command by name """
+        """ checks for existence of a command by name """
         # isupper() rejects all the normal properties
         return name.isupper() and name in self.__dict__
 
     def has_pid(self, mode, pid):
-        """ checks for existance of a command by int mode and int pid """
+        """ checks for existence of a command by int mode and int pid """
         if (mode < 0) or (pid < 0):
             return False
         if mode >= len(self.modes):

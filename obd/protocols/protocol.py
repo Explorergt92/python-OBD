@@ -297,7 +297,7 @@ class Protocol(object):
         """
             override in subclass for each protocol
 
-            Function recieves a Frame object preloaded
+            Function receives a Frame object preloaded
             with the raw string line from the car.
 
             Function should return a boolean. If fatal errors were
@@ -309,7 +309,7 @@ class Protocol(object):
         """
             override in subclass for each protocol
 
-            Function recieves a Message object
+            Function receives a Message object
             preloaded with a list of Frame objects.
 
             Function should return a boolean. If fatal errors were
