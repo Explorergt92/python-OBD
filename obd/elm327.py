@@ -308,17 +308,10 @@ class ELM327:
 
         for baud in self._TRY_BAUDS:
             self.__port.baudrate = baud
-            self.__port.flushInput()
-            self.__port.flushOutput()
+            self.__port.reset_input_buffer()  # dump everything in the input buffer
+            self.__port.reset_output_buffer()  # dump everything in the output buffer
 
-            # Send a nonsense command to get a prompt back from the scanner
-            # (an empty command runs the risk of repeating a dangerous command)
-            # The first character might get eaten if the interface was busy,
-            # so write a second one (again so that the lone CR doesn't repeat
-            # the previous command)
-
-            # All commands should be terminated with carriage return according
-            # to ELM327 and STN11XX specifications
+            # All commands should be terminated with carriage return according to ELM327 and STN11XX specifications
             self.__port.write(b"\x7F\x7F\r")
             self.__port.flush()
             response = self.__port.read(1024)
@@ -503,7 +496,7 @@ class ELM327:
             cmd += b"\r"  # terminate with carriage return in accordance with ELM327 and STN11XX specifications
             logger.debug("write: " + repr(cmd))
             try:
-                self.__port.flushInput()  # dump everything in the input buffer
+                self.__port.reset_input_buffer()  # dump everything in the input buffer
                 self.__port.write(cmd)  # turn the string into bytes and write
                 self.__port.flush()  # wait for the output buffer to finish transmitting
             except Exception:

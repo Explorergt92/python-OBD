@@ -58,6 +58,36 @@ connection = obd.OBD()
 
 r = connection.query(obd.commands.RPM) # returns the response from the car
 ```
+<br>
+
+---
+
+### query_multi(*commands, force=False)
+
+Similar to the standard `query()` function, but allows up to 6 `OBDCommands` to be sent simultaneously. Returns a tuple of `OBDResponse`s in the same order as the commands were specified.
+
+*For non-blocking querying, see [Async Querying](Async Connections.md)*
+
+```python
+responses = connection.query_multi(obd.commands.RPM, obd.commands.SPEED)
+
+# OR (using python tuple unpacking)
+
+rpm, speed = connection.query_multi(obd.commands.RPM, obd.commands.SPEED)
+
+# OR (specifying a list as varargs)
+
+commands = [obd.commands.RPM, obd.commands.SPEED]
+responses = connection.query_multi(*commands)
+```
+
+*NOTE: this function only performs faster over CAN protocols. Using this function over non-CAN protocols will simply iteratively call `query()`, and is equivalent to writing:*
+
+```python
+commands = [obd.commands.RPM, obd.commands.SPEED]
+responses = tuple(connection.query(cmd) for cmd in commands)
+```
+<br>
 
 ---
 
