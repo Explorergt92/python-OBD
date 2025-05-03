@@ -82,10 +82,10 @@ class ELM327:
     # used as a fallback, when ATSP0 doesn't cut it
     _TRY_PROTOCOL_ORDER = [
         "6",  # ISO_15765_4_11bit_500k
-        "8",  # ISO_15765_4_11bit_250k
-        "1",  # SAE_J1850_PWM
         "7",  # ISO_15765_4_29bit_500k
+        "8",  # ISO_15765_4_11bit_250k
         "9",  # ISO_15765_4_29bit_250k
+        "1",  # SAE_J1850_PWM
         "2",  # SAE_J1850_VPW
         "3",  # ISO_9141_2
         "4",  # ISO_14230_4_5baud
@@ -103,7 +103,7 @@ class ELM327:
     # We check the two default baud rates first, then go fastest to
     # slowest, on the theory that anyone who's using a slow baud rate is
     # going to be less picky about the time required to detect it.
-    _TRY_BAUDS = [38400, 9600, 230400, 115200, 57600, 19200]
+    _TRY_BAUDS = [9600, 19200, 38400, 57600, 115200, 230400, 500000]
 
     def __init__(self, portname, baudrate, protocol, timeout,
                  check_voltage=True, start_low_power=False):
@@ -128,7 +128,7 @@ class ELM327:
                                                 parity=serial.PARITY_NONE,
                                                 stopbits=1,
                                                 bytesize=8,
-                                                timeout=10)  # seconds
+                                                timeout=30)  # seconds
         except serial.SerialException as e:
             self.__error(e)
             return
