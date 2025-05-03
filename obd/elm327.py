@@ -107,7 +107,7 @@ class ELM327:
 
     def __init__(self, portname, baudrate, protocol, timeout,
                  check_voltage=True, start_low_power=False):
-        """Initializes port by resetting device and gettings supported PIDs. """
+        """Initializes port by resetting device and getting supported PIDs. """
 
         logger.info("Initializing ELM327: PORT=%s BAUD=%s PROTOCOL=%s" %
                     (
@@ -167,13 +167,13 @@ class ELM327:
             self.__error("ATH1 did not return 'OK', or echoing is still ON")
             return
 
-        # ------------------------ ATL0 (linefeeds OFF) -----------------------
+        # ------------------------ ATL0 (line feeds OFF) -----------------------
         r = self.__send(b"ATL0")
         if not self.__isok(r):
             self.__error("ATL0 did not return 'OK'")
             return
 
-        # by now, we've successfuly communicated with the ELM, but not the car
+        # by now, we've successfully communicated with the ELM, but not the car
         self.__status = OBDStatus.ELM_CONNECTED
 
         # -------------------------- AT RV (read volt) ------------------------
@@ -189,7 +189,7 @@ class ELM327:
             except ValueError as e:
                 self.__error("Incorrect response from 'AT RV'")
                 return
-            # by now, we've successfuly connected to the OBD socket
+            # by now, we've successfully connected to the OBD socket
             self.__status = OBDStatus.OBD_CONNECTED
 
         # try to communicate with the car, and load the correct protocol parser
@@ -302,7 +302,7 @@ class ELM327:
         Returns boolean for success.
         """
 
-        # before we change the timout, save the "normal" value
+        # before we change the timeout, save the "normal" value
         timeout = self.__port.timeout
         self.__port.timeout = self.timeout  # we're only talking with the ELM, so things should go quickly
 

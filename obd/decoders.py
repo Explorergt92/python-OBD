@@ -290,7 +290,7 @@ def status(messages):
     #  ┌MIL      ||||||┌Misfire supported
     #  |         |||||||
     #  10000011 00000111 11111111 00000000
-    #   [# DTC] X        [supprt] [~ready]
+    #   [# DTC] X        [support] [~ready]
 
     output = Status()
     output.MIL = bits[0]

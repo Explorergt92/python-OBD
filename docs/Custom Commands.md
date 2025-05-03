@@ -10,7 +10,7 @@ If the command you need is not in python-OBDs tables, you can create a new `OBDC
 | bytes                | int      | Number of bytes expected in response (zero means unknown)                  |
 | decoder              | callable | Function used for decoding messages from the OBD adapter                   |
 | ecu (optional)       | ECU      | ID of the ECU this command should listen to (`ECU.ALL` by default)         |
-| fast (optional)      | bool     | Allows python-OBD to alter this command for efficieny (`False` by default) |
+| fast (optional)      | bool     | Allows python-OBD to alter this command for efficiency (`False` by default) |
 | header (optional)    | string   | If set, use a custom header instead of the default one (7E0)               |
 
 
@@ -25,7 +25,7 @@ def rpm(messages):
     """ decoder for RPM messages """
     d = messages[0].data # only operate on a single message
     d = d[2:] # chop off mode and PID bytes
-    v = bytes_to_int(d) / 4.0  # helper function for converting byte arrays to ints
+    v = bytes_to_int(d) / 4.0  # helper function for converting byte arrays to integer
     return v * Unit.RPM # construct a Pint Quantity
 
 c = OBDCommand("RPM", \          # name
@@ -68,7 +68,7 @@ def <name>(<list_of_messages>):
     return <value>
 ```
 
-The return value of your decoder will be loaded into the `OBDResponse.value` field. Decoders are given a list of `Message` objects as an argument. If your decoder is called, this list is garaunteed to have at least one message object. Each `Message` object has a `data` property, which holds a parsed bytearray, and is also garauteed to have the number of bytes specified by the command. This bytearray includes any mode and PID bytes in the vehicle's response.
+The return value of your decoder will be loaded into the `OBDResponse.value` field. Decoders are given a list of `Message` objects as an argument. If your decoder is called, this list is guaranteed to have at least one message object. Each `Message` object has a `data` property, which holds a parsed bytearray, and is also guaranteed to have the number of bytes specified by the command. This bytearray includes any mode and PID bytes in the vehicle's response.
 
 *NOTE: If you are transitioning from an older version of Python-OBD (where decoders were given raw hex strings as arguments), you can use the `Message.hex()` function as a patch.*
 
@@ -96,7 +96,7 @@ The `ecu` argument is a constant used to filter incoming messages. Some commands
 
 ## OBDCommand.fast
 
-The optional `fast` argument tells python-OBD whether it is safe to append a `"01"` to the end of the command. This will instruct the adapter to return the first response it recieves, rather than waiting for more (and eventually reaching a timeout). This can speed up requests significantly, and is enabled for most of python-OBDs internal commands. However, for unusual commands, it is safest to leave this disabled.
+The optional `fast` argument tells python-OBD whether it is safe to append a `"01"` to the end of the command. This will instruct the adapter to return the first response it receives, rather than waiting for more (and eventually reaching a timeout). This can speed up requests significantly, and is enabled for most of python-OBDs internal commands. However, for unusual commands, it is safest to leave this disabled.
 
 ---
 

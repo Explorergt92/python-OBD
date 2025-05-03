@@ -6,16 +6,16 @@ authors = [
   { name="Alistair Francis", email="alistair@alistair23.me" },
   { name="Paul Bartek" },
   { name="Peter Harris" },
+  { name="Jesse Decker" },
+  { name="John Scott", email="john.s@eloq-algos.com" },
 ]
 description = "Serial module for handling live sensor data from a vehicle's OBD-II port"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 classifiers = [
     "Operating System :: POSIX :: Linux",
     "Topic :: System :: Monitoring",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -23,7 +23,7 @@ classifiers = [
     "Topic :: System :: Logging",
     "Intended Audience :: Developers",
 ]
-keywords = ["obd", "obdii", "obd-ii", "obd2", "car", "serial", "vehicle", "diagnostic"]
+keywords = ["obd", "obdii", "obd-ii", "obd2", "car", "serial", "vehicle", "diagnostic", "elm327", "elm-327", "automotive", "monitoring"]
 dependencies = [
     "pyserial==3.*",
     "pint==0.24.*",
@@ -32,5 +32,5 @@ license = "GPL-2.0-only"
 license-files = ["LICENSE"]
 
 [project.urls]
-Homepage = "https://github.com/brendan-w/python-OBD"
-Issues = "https://github.com/brendan-w/python-OBD/issues"
+Homepage = "https://github.com/Explorergt92/python-OBD"
+Issues = "https://github.com/Explorergt92/python-OBD/issues"

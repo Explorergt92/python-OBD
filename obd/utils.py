@@ -131,7 +131,7 @@ def isHex(_hex):
 
 
 def contiguous(l, start, end):
-    """ checks that a list of integers are consequtive """
+    """ checks that a list of integers are consecutive """
     if not l:
         return False
     if l[0] != start:
@@ -139,7 +139,7 @@ def contiguous(l, start, end):
     if l[-1] != end:
         return False
 
-    # for consequtiveness, look at the integers in pairs
+    # Check consecutive integers by comparing each adjacent pair.
     pairs = zip(l, l[1:])
     if not all([p[0] + 1 == p[1] for p in pairs]):
         return False
@@ -183,7 +183,7 @@ def scan_serial():
         ]
         possible_ports += [port for port in glob.glob('/dev/tty.*') if port not in exclude]
 
-    # possible_ports += glob.glob('/dev/pts/[0-9]*') # for obdsim
+    # possible_ports += glob.glob('/dev/pts/[0-9]*') # for OBD Sim
 
     for port in possible_ports:
         if try_port(port):

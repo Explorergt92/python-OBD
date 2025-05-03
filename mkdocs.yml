@@ -1,6 +1,6 @@
 site_name: python-OBD
-repo_url: https://github.com/brendan-w/python-OBD
-repo_name: GitHub
+repo_url: https://github.com/Explorergt92/python-OBD
+repo_name: GitHub Explorergt92/python-OBD
 extra_javascript:
 - assets/extra.js
 nav:

@@ -32,17 +32,11 @@
 
 
 import logging
-import sys
 import time
 
 from .codes import *
 
 logger = logging.getLogger(__name__)
-
-if sys.version[0] < '3':
-    string_types = (str, unicode)
-else:
-    string_types = (str,)
 
 
 class OBDResponse:
@@ -140,7 +134,7 @@ class Monitor:
     def __getitem__(self, key):
         if isinstance(key, int):
             return self._tests.get(key, MonitorTest())
-        elif isinstance(key, string_types):
+        elif isinstance(key, str):
             return self.__dict__.get(key, MonitorTest())
         else:
             logger.warning("Monitor test results can only be retrieved by TID value or property name")

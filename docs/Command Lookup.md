@@ -22,7 +22,7 @@ The `commands` table also has a few helper methods for determining if a particul
 
 ### has_command(command)
 
-Checks the internal command tables for the existance of the given `OBDCommand` object. Commands are compared by mode and PID value.
+Checks the internal command tables for the existence of the given `OBDCommand` object. Commands are compared by mode and PID value.
 
 ```python
 import obd

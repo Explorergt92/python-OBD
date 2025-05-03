@@ -31,4 +31,4 @@ This directory also contains a set of end-to-end tests that require [obdsim](htt
   py.test --port=/dev/pts/<num>
   ```
 
-For more information on pytest with virtualenvs, [read more here](https://pytest.org/dev/goodpractises.html)
+For more information on pytest with virtualenv, [read more here](https://pytest.org/dev/goodpractises.html)

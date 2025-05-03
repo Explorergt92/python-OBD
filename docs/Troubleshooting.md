@@ -60,12 +60,12 @@ Here are some common logs from python-OBD, and their meanings:
 [obd] wait: 1 seconds
 [obd] __read() found nothing
 [obd] __read() found nothing
-[obd] __read() never recieved prompt character
+[obd] __read() never received prompt character
 [obd] read: ''
 [obd] write: 'ATE0\r\n'
 [obd] __read() found nothing
 [obd] __read() found nothing
-[obd] __read() never recieved prompt character
+[obd] __read() never received prompt character
 [obd] read: ''
 [obd] Connection Error:
 [obd]     ATE0 did not return 'OK'

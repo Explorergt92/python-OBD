@@ -82,5 +82,6 @@ This library is forked from:
 
 -   <https://github.com/peterh/pyobd>
 -   <https://github.com/Pbartek/pyobd-pi>
+-   <https://github.com/brendan-w/python-OBD>
 
 Enjoy and drive safe!

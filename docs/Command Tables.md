@@ -83,7 +83,7 @@
 | 43 | ABSOLUTE_LOAD             | Absolute load value                     | Unit.percent          |
 | 44 | COMMANDED_EQUIV_RATIO     | Commanded equivalence ratio             | Unit.ratio            |
 | 45 | RELATIVE_THROTTLE_POS     | Relative throttle position              | Unit.percent          |
-| 46 | AMBIANT_AIR_TEMP          | Ambient air temperature                 | Unit.celsius          |
+| 46 | AMBIENT_AIR_TEMP          | Ambient air temperature                 | Unit.celsius          |
 | 47 | THROTTLE_POS_B            | Absolute throttle position B            | Unit.percent          |
 | 48 | THROTTLE_POS_C            | Absolute throttle position C            | Unit.percent          |
 | 49 | ACCELERATOR_POS_D         | Accelerator pedal position D            | Unit.percent          |
