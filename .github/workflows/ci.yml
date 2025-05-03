@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: ['master', 'main', 'explorergt92-1']
+    branches: ['main', 'explorergt92-1']
   pull_request:
     branches: '*'
 
