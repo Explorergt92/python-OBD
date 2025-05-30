@@ -187,7 +187,7 @@ class ELM327:
                     logger.error("OBD2 socket disconnected")
                     return
             except ValueError as e:
-                self.__error("Incorrect response from 'AT RV'")
+                self.__error(f"Incorrect response from 'AT RV'{e}")
                 return
             # by now, we've successfully connected to the OBD socket
             self.__status = OBDStatus.OBD_CONNECTED
@@ -304,14 +304,15 @@ class ELM327:
 
         # before we change the timeout, save the "normal" value
         timeout = self.__port.timeout
-        self.__port.timeout = self.timeout  # we're only talking with the ELM, so things should go quickly
+        self.__port.timeout = self.timeout
 
         for baud in self._TRY_BAUDS:
             self.__port.baudrate = baud
             self.__port.reset_input_buffer()  # dump everything in the input buffer
             self.__port.reset_output_buffer()  # dump everything in the output buffer
 
-            # All commands should be terminated with carriage return according to ELM327 and STN11XX specifications
+            # All commands should be terminated with carriage return according to
+            # ELM327 and STN11XX specifications
             self.__port.write(b"\x7F\x7F\r")
             self.__port.flush()
             response = self.__port.read(1024)
