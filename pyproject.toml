@@ -1,23 +1,21 @@
 [project]
 name = "obd"
-version = "0.7.3"
+version = "0.7.4"
 authors = [
+  { name="John Scott", email="john.s@eloq-algos.com" },
   { name="Brendan Whitfield", email="me@brendan-w.com" },
   { name="Alistair Francis", email="alistair@alistair23.me" },
   { name="Paul Bartek" },
   { name="Peter Harris" },
   { name="Jesse Decker" },
-  { name="John Scott", email="john.s@eloq-algos.com" },
 ]
 description = "Serial module for handling live sensor data from a vehicle's OBD-II port"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 classifiers = [
     "Operating System :: POSIX :: Linux",
     "Topic :: System :: Monitoring",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Development Status :: 3 - Alpha",
     "Topic :: System :: Logging",
