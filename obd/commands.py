@@ -8,6 +8,7 @@
 # Copyright 2009 Secons Ltd. (www.obdtester.com)                       #
 # Copyright 2009 Peter J. Creath                                       #
 # Copyright 2016 Brendan Whitfield (brendan-w.com)                     #
+# Copyright 2025 John E. Scott (john.s@elqo-algos.com)                 #
 #                                                                      #
 ########################################################################
 #                                                                      #
@@ -49,7 +50,9 @@ Define command tables
 # see OBDCommand.py for descriptions & purposes for each of these fields
 
 __mode1__ = [
+
     #                      name                             description                    cmd  bytes       decoder           ECU       fast
+
     OBDCommand("PIDS_A"                     , "Supported PIDs [01-20]"                  , b"0100", 6, pid,                   ECU.ENGINE, True),
     OBDCommand("STATUS"                     , "Status since DTCs cleared"               , b"0101", 6, status,                ECU.ENGINE, True),
     OBDCommand("FREEZE_DTC"                 , "DTC that triggered the freeze frame"     , b"0102", 4, single_dtc,            ECU.ENGINE, True),
@@ -84,6 +87,7 @@ __mode1__ = [
     OBDCommand("RUN_TIME"                   , "Engine Run Time"                         , b"011F", 4, uas(0x12),             ECU.ENGINE, True),
 
     #                      name                             description                    cmd  bytes       decoder           ECU       fast
+
     OBDCommand("PIDS_B"                     , "Supported PIDs [21-40]"                  , b"0120", 6, pid,                   ECU.ENGINE, True),
     OBDCommand("DISTANCE_W_MIL"             , "Distance Traveled with MIL on"           , b"0121", 4, uas(0x25),             ECU.ENGINE, True),
     OBDCommand("FUEL_RAIL_PRESSURE_VAC"     , "Fuel Rail Pressure (relative to vacuum)" , b"0122", 4, uas(0x19),             ECU.ENGINE, True),
@@ -118,6 +122,7 @@ __mode1__ = [
     OBDCommand("CATALYST_TEMP_B2S2"         , "Catalyst Temperature: Bank 2 - Sensor 2" , b"013F", 4, uas(0x16),             ECU.ENGINE, True),
 
     #                      name                             description                    cmd  bytes       decoder           ECU       fast
+
     OBDCommand("PIDS_C"                     , "Supported PIDs [41-60]"                  , b"0140", 6, pid,                   ECU.ENGINE, True),
     OBDCommand("STATUS_DRIVE_CYCLE"         , "Monitor status this drive cycle"         , b"0141", 6, status,                ECU.ENGINE, True),
     OBDCommand("CONTROL_MODULE_VOLTAGE"     , "Control module voltage"                  , b"0142", 4, uas(0x0B),             ECU.ENGINE, True),

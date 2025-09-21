@@ -8,6 +8,7 @@
 # Copyright 2009 Secons Ltd. (www.obdtester.com)                       #
 # Copyright 2009 Peter J. Creath                                       #
 # Copyright 2016 Brendan Whitfield (brendan-w.com)                     #
+# Copyright 2025 John E. Scott (john.s@elqo-algos.com)                 #
 #                                                                      #
 ########################################################################
 #                                                                      #
@@ -90,7 +91,7 @@ UAS_IDS = {
     0x13: UAS(False, 1, Unit.milliohm),
     0x14: UAS(False, 1, Unit.ohm),
     0x15: UAS(False, 1, Unit.kiloohm),
-    0x16: UAS(False, 0.1, Unit.celsius, offset=-40.0),
+    0x16: UAS(False, 0.1, Unit.Celsius, offset=-40.0),
     0x17: UAS(False, 0.01, Unit.kilopascal),
     0x18: UAS(False, 0.0117, Unit.kilopascal),
     0x19: UAS(False, 0.079, Unit.kilopascal),
@@ -152,7 +153,7 @@ UAS_IDS = {
     #
     0x90: UAS(True, 1, Unit.millisecond),
     #
-    0x96: UAS(True, 0.1, Unit.celsius),
+    0x96: UAS(True, 0.1, Unit.Celsius),
     #
     0x99: UAS(True, 0.1, Unit.kilopascal),
     #

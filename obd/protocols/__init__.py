@@ -8,6 +8,7 @@
 # Copyright 2009 Secons Ltd. (www.obdtester.com)                       #
 # Copyright 2009 Peter J. Creath                                       #
 # Copyright 2016 Brendan Whitfield (brendan-w.com)                     #
+# Copyright 2025 John E. Scott (john.s@elqo-algos.com)                 #
 #                                                                      #
 ########################################################################
 #                                                                      #

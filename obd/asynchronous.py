@@ -8,6 +8,7 @@
 # Copyright 2009 Secons Ltd. (www.obdtester.com)                       #
 # Copyright 2009 Peter J. Creath                                       #
 # Copyright 2016 Brendan Whitfield (brendan-w.com)                     #
+# Copyright 2025 John E. Scott (john.s@elqo-algos.com)                 #
 #                                                                      #
 ########################################################################
 #                                                                      #
@@ -30,197 +31,295 @@
 #                                                                      #
 ########################################################################
 
-import time
-import threading
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import functools
 import logging
-from .OBDResponse import OBDResponse
-from .obd import OBD
+import threading
+from collections.abc import Awaitable, Callable
+from types import TracebackType
+from typing import Any, Dict, Final, Optional, Type
 
-logger = logging.getLogger(__name__)
+import obd
+
+__all__: Final = ["Async"]
+
+# --------------------------------------------------------------------------- #
+# Typing aliases                                                              #
+# --------------------------------------------------------------------------- #
+_OBDResponse = obd.OBDResponse
+_Callback = Callable[[_OBDResponse], Awaitable[None] | None]
+CommandLike = obd.OBDCommand | str
+
+log = logging.getLogger(__name__)
 
 
-class Async(OBD):
+def _ensure_coroutine(fn: _Callback) -> Callable[[_OBDResponse], Awaitable[None]]:
     """
-        Class representing an OBD-II connection with it's assorted commands/sensors
-        Specialized for asynchronous value reporting.
+    Wrap *fn* so that it can always be `await`-ed.
+    Synchronous callbacks are executed in the loop's default executor.
+    """
+    if asyncio.iscoroutinefunction(fn):
+
+        @functools.wraps(fn)
+        async def _wrapper(resp: _OBDResponse) -> None:  # type: ignore[override]
+            await fn(resp)
+
+    else:
+
+        @functools.wraps(fn)
+        async def _wrapper(resp: _OBDResponse) -> None:  # type: ignore[override]
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, fn, resp)
+
+    return _wrapper
+
+
+class _PollItem:
+    """
+    Internal container that tracks one watched command, its callback and
+    the asyncio.Task that performs the polling.
     """
 
-    def __init__(self, portstr=None, baudrate=None, protocol=None, fast=True,
-                 timeout=0.1, check_voltage=True, start_low_power=False,
-                 delay_cmds=0.25):
-        self.__thread = None
-        super(Async, self).__init__(portstr, baudrate, protocol, fast,
-                                    timeout, check_voltage, start_low_power)
-        self.__commands = {}   # key = OBDCommand, value = Response
-        self.__callbacks = {}  # key = OBDCommand, value = list of Functions
-        self.__running = False
-        self.__was_running = False  # used with __enter__() and __exit__()
-        self.__delay_cmds = delay_cmds
+    __slots__ = ("command", "callback", "task")
 
-    @property
-    def running(self):
-        return self.__running
+    def __init__(self, command: obd.OBDCommand, callback: _Callback):
+        self.command: obd.OBDCommand = command
+        self.callback: Callable[[_OBDResponse], Awaitable[None]] = _ensure_coroutine(
+            callback
+        )
+        self.task: Optional[asyncio.Task[None]] = None
 
-    def start(self):
-        """ Starts the async update loop """
-        if not self.is_connected():
-            logger.info("Async thread not started because no connection was made")
-            return
 
-        if len(self.__commands) == 0:
-            logger.info("Async thread not started because no commands were registered")
-            return
+# =========================================================================== #
+# Async class                                                                 #
+# =========================================================================== #
+class Async:
+    """
+    A modern, fully asyncio-based replacement for ``obd.Async``.
 
-        if self.__thread is None:
-            logger.info("Starting async thread")
-            self.__running = True
-            self.__thread = threading.Thread(target=self.run)
-            self.__thread.daemon = True
-            self.__thread.start()
+    Parameters
+    ----------
+    *args, **kw:
+        Forwarded to ``obd.OBD`` constructor (port, baudrate, fast, …)
+    loop:
+        Optional event-loop to use.  Defaults to ``asyncio.get_event_loop()``.
+    poll_interval:
+        Seconds between successive polls of each watched command.
+    use_executor:
+        If True (default) every `conn.query` call runs in the default
+        ThreadPoolExecutor.  Set to False when the transport backend offers
+        an async `query_async` coroutine – we’ll call that directly.
+    """
 
-    def stop(self):
-        """ Stops the async update loop """
-        if self.__thread is not None:
-            logger.info("Stopping async thread...")
-            self.__running = False
-            self.__thread.join()
-            self.__thread = None
-            logger.info("Async thread stopped")
+    # --------------------------------------------------------------------- #
+    def __init__(
+        self,
+        *args: Any,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        poll_interval: float = 0.25,
+        use_executor: bool = True,
+        **kw: Any,
+    ):
+        self._loop: asyncio.AbstractEventLoop = loop or asyncio.get_event_loop()
+        self._conn: obd.OBD = obd.OBD(*args, **kw)
 
-    def paused(self):
-        """
-            A stub function for semantic purposes only
-            enables code such as:
+        self._poll_interval: float = poll_interval
+        self._use_executor: bool = use_executor
 
-            with connection.paused() as was_running
-                ...
-        """
+        self._running: asyncio.Event = asyncio.Event()
+        self._stopped: asyncio.Event = asyncio.Event()
+        self._tasks: set[asyncio.Task[None]] = set()
+        self._watchlist: Dict[str, _PollItem] = {}
+
+        # For start(blocking=True) support
+        self._private_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._private_thread: Optional[threading.Thread] = None
+
+    # =========================== context-manager ========================= #
+    async def __aenter__(self) -> "Async":
+        self.start()
+        await self.wait_running()
         return self
 
-    def __enter__(self):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        await self.stop()
+
+    # =============================== API ================================= #
+    def watch(
+        self,
+        cmd: CommandLike,
+        callback: _Callback,
+        *,
+        force: bool = False,
+    ) -> None:
         """
-            pauses the async loop,
-            while recording the old state
+        Begin polling *cmd* and invoke *callback* with each new value.
         """
-        self.__was_running = self.__running
-        self.stop()
-        return self.__was_running
+        command = _coerce_command(cmd)
+        key = command.id
 
-    def __exit__(self, exc_type, exc_value, traceback):
+        if key in self._watchlist and not force:
+            raise ValueError(f"Command {command} is already being watched")
+
+        self._watchlist[key] = _PollItem(command, callback)
+
+        # If connection already running schedule immediately
+        if self.is_running:
+            self._schedule_poll(self._watchlist[key])
+
+    def unwatch(self, cmd: CommandLike) -> None:
         """
-            resumes the update loop if it was running
-            when __enter__ was called
+        Stop polling *cmd*.  Silent if command not currently watched.
         """
-        if not self.__running and self.__was_running:
-            self.start()
+        command = _coerce_command(cmd)
+        item = self._watchlist.pop(command.id, None)
+        if item and item.task:
+            item.task.cancel()
 
-        return False  # don't suppress any exceptions
-
-    def close(self):
-        """ Closes the connection """
-        self.stop()
-        super(Async, self).close()
-
-    def watch(self, c, callback=None, force=False):
+    # ----------------------- lifecycle ----------------------------------- #
+    def start(self, *, blocking: bool = False) -> None:
         """
-            Subscribes the given command for continuous updating. Once subscribed,
-            query() will return that command's latest value. Optional callbacks can
-            be given, which will be fired upon every new value.
+        Kick off background polling tasks.
+
+        blocking=False (default): reuse whichever loop is already running.
+        blocking=True            : spawn a dedicated event-loop in its own
+                                   daemon thread so *synchronous* scripts can
+                                   still call `.start()` without asyncio.
+        """
+        if self.is_running:
+            return
+
+        self._running.set()
+        self._stopped.clear()
+
+        # Ensure we have an event-loop to create tasks on
+        if blocking:
+            # Create a private loop in a daemon thread exactly once
+            if self._private_loop is None:
+                self._private_loop = asyncio.new_event_loop()
+
+                def _run_loop(
+                    loop: asyncio.AbstractEventLoop,
+                ) -> None:  # pragma: no cover
+                    asyncio.set_event_loop(loop)
+                    loop.run_forever()
+
+                self._private_thread = threading.Thread(
+                    target=_run_loop, args=(self._private_loop,), daemon=True
+                )
+                self._private_thread.start()
+
+            self._loop = self._private_loop  # future tasks use private loop
+
+        # Schedule all currently watched commands
+        for item in self._watchlist.values():
+            self._schedule_poll(item)
+
+    async def stop(self) -> None:
+        """
+        Cancel pollers, close the underlying OBD connection and shut down any
+        private event-loop created by `start(blocking=True)`.
+        """
+        if not self.is_running:
+            return
+
+        self._running.clear()
+
+        # Cancel polling tasks
+        for t in list(self._tasks):
+            t.cancel()
+
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+        self._tasks.clear()
+
+        # Close the physical connection in executor to avoid blocking I/O
+        await self._loop.run_in_executor(None, self._conn.close)
+
+        # Teardown private loop if we created one
+        if self._private_loop:
+            self._private_loop.call_soon_threadsafe(self._private_loop.stop)
+            if self._private_thread:
+                self._private_thread.join()
+            self._private_loop = None
+            self._private_thread = None
+
+        self._stopped.set()
+
+    # ------------------------- status helpers ---------------------------- #
+    @property
+    def is_running(self) -> bool:
+        return self._running.is_set()
+
+    async def wait_running(self) -> None:
+        await self._running.wait()
+
+    async def wait_stopped(self) -> None:
+        await self._stopped.wait()
+
+    # ===================================================================== #
+    # Internal helpers                                                      #
+    # ===================================================================== #
+    def _schedule_poll(self, item: _PollItem) -> None:
+        """
+        Create an asyncio.Task that loops forever (until cancelled), querying
+        the command and forwarding the response to its callback.
         """
 
-        # the dict shouldn't be changed while the daemon thread is iterating
-        if self.__running:
-            logger.warning("Can't watch() while running, please use stop()")
-        else:
+        async def _poll() -> None:
+            cmd = item.command
+            cb = item.callback
+            interval = self._poll_interval
+            conn = self._conn
 
-            if not force and not self.test_cmd(c):
-                # self.test_cmd() will print warnings
-                return
+            while self.is_running:
+                try:
+                    # Choose fastest query path
+                    if not self._use_executor and hasattr(conn, "query_async"):
+                        response: _OBDResponse = await conn.query_async(cmd)  # type: ignore[attr-defined]
+                    else:
+                        response = await self._loop.run_in_executor(
+                            None, conn.query, cmd, False
+                        )
+                    await cb(response)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    log.exception("Error while polling %s: %s", cmd, exc)
 
-            # new command being watched, store the command
-            if c not in self.__commands:
-                logger.info("Watching command: %s" % str(c))
-                self.__commands[c] = OBDResponse()  # give it an initial value
-                self.__callbacks[c] = []  # create an empty list
+                await asyncio.sleep(interval)
 
-            # if a callback was given, push it
-            if hasattr(callback, "__call__") and (callback not in self.__callbacks[c]):
-                logger.info("subscribing callback for command: %s" % str(c))
-                self.__callbacks[c].append(callback)
+        task = self._loop.create_task(_poll(), name=f"poll-{item.command}")
+        task.add_done_callback(self._task_done)
+        item.task = task
+        self._tasks.add(task)
 
-    def unwatch(self, c, callback=None):
-        """
-            Unsubscribes a specific command (and optionally, a specific callback)
-            from being updated. If no callback is specified, all callbacks for
-            that command are dropped.
-        """
+    # ------------------------------------------------------------------ #
+    def _task_done(self, task: "asyncio.Task[None]") -> None:
+        self._tasks.discard(task)
+        with contextlib.suppress(asyncio.CancelledError):
+            exc = task.exception()
+            if exc:
+                log.error("Polling task crashed: %s", exc, exc_info=exc)
 
-        # the dict shouldn't be changed while the daemon thread is iterating
-        if self.__running:
-            logger.warning("Can't unwatch() while running, please use stop()")
-        else:
-            logger.info("Unwatching command: %s" % str(c))
 
-            if c in self.__commands:
-                # if a callback was specified, only remove the callback
-                if hasattr(callback, "__call__") and (callback in self.__callbacks[c]):
-                    self.__callbacks[c].remove(callback)
-
-                    # if no more callbacks are left, remove the command entirely
-                    if len(self.__callbacks[c]) == 0:
-                        self.__commands.pop(c, None)
-                else:
-                    # no callback was specified, pop everything
-                    self.__callbacks.pop(c, None)
-                    self.__commands.pop(c, None)
-
-    def unwatch_all(self):
-        """ Unsubscribes all commands and callbacks from being updated """
-
-        # the dict shouldn't be changed while the daemon thread is iterating
-        if self.__running:
-            logger.warning("Can't unwatch_all() while running, please use stop()")
-        else:
-            logger.info("Unwatching all")
-            self.__commands = {}
-            self.__callbacks = {}
-
-    def query(self, c, force=False):
-        """
-            Non-blocking query().
-            Only commands that have been watch()ed will return valid responses
-        """
-
-        if c in self.__commands:
-            return self.__commands[c]
-        else:
-            return OBDResponse()
-
-    def run(self):
-        """ Daemon thread """
-
-        # loop until the stop signal is received
-        while self.__running:
-
-            if len(self.__commands) > 0:
-                # loop over the requested commands, send, and collect the response
-                for c in self.__commands:
-                    if not self.is_connected():
-                        logger.info("Async thread terminated because device disconnected")
-                        self.__running = False
-                        self.__thread = None
-                        return
-
-                    # force, since commands are checked for support in watch()
-                    r = super(Async, self).query(c, force=True)
-
-                    # store the response
-                    self.__commands[c] = r
-
-                    # fire the callbacks, if there are any
-                    for callback in self.__callbacks[c]:
-                        callback(r)
-                time.sleep(self.__delay_cmds)
-
-            else:
-                time.sleep(0.25)  # idle
+# =========================================================================== #
+# Utility functions                                                           #
+# =========================================================================== #
+def _coerce_command(cmd: CommandLike) -> obd.OBDCommand:
+    """
+    Accept either an ``obd.OBDCommand`` instance or a string such as "RPM".
+    """
+    if isinstance(cmd, obd.OBDCommand):
+        return cmd
+    if isinstance(cmd, str):
+        return getattr(obd.commands, cmd.upper())
+    raise TypeError("cmd must be str or OBDCommand")

@@ -57,5 +57,5 @@ target/
 
 .venv
 .env
-.idea/
 .vscode/
+.idea/

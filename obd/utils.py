@@ -8,6 +8,7 @@
 # Copyright 2009 Secons Ltd. (www.obdtester.com)                       #
 # Copyright 2009 Peter J. Creath                                       #
 # Copyright 2015 Brendan Whitfield (bcw7044@rit.edu)                   #
+# Copyright 2025 John E. Scott (john.s@elqo-algos.com)                 #
 #                                                                      #
 ########################################################################
 #                                                                      #
@@ -130,17 +131,17 @@ def isHex(_hex):
     return all([c in string.hexdigits for c in _hex])
 
 
-def contiguous(l, start, end):
+def contiguous(lst, start, end):
     """ checks that a list of integers are consecutive """
-    if not l:
+    if not lst:
         return False
-    if l[0] != start:
+    if lst[0] != start:
         return False
-    if l[-1] != end:
+    if lst[-1] != end:
         return False
 
     # Check consecutive integers by comparing each adjacent pair.
-    pairs = zip(l, l[1:])
+    pairs = zip(lst, lst[1:])
     if not all([p[0] + 1 == p[1] for p in pairs]):
         return False
 
