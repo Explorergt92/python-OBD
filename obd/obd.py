@@ -50,7 +50,8 @@ class OBD(object):
     """
 
     def __init__(self, portstr=None, baudrate=None, protocol=None, fast=True,
-                 timeout=0.1, check_voltage=True, start_low_power=False):
+                 timeout=0.1, check_voltage=True, start_low_power=False,
+                 interface=None):
         self.interface = None
         self.supported_commands = set(commands.base_commands())
         self.fast = fast  # global switch for disabling optimizations
@@ -60,8 +61,13 @@ class OBD(object):
         self.__frame_counts = {}  # keeps track of the number of return frames for each command
 
         logger.info("======================= python-OBD (v%s) =======================" % __version__)
-        self.__connect(portstr, baudrate, protocol,
-                       check_voltage, start_low_power)  # initialize by connecting and loading sensors
+
+        if interface is not None:
+            logger.info("Using custom backend interface: %s", interface.__class__.__name__)
+            self.interface = interface
+        else:
+            self.__connect(portstr, baudrate, protocol,
+                           check_voltage, start_low_power)  # initialize by connecting and loading sensors
         self.__load_commands()  # try to load the car's supported commands
         logger.info("===================================================================")
 
@@ -104,7 +110,6 @@ class OBD(object):
             Queries for available PIDs, sets their support status,
             and compiles a list of command objects.
         """
-
         if self.status() != OBDStatus.CAR_CONNECTED:
             logger.warning("Cannot load commands: No connection to car")
             return
@@ -112,37 +117,38 @@ class OBD(object):
         logger.info("querying for supported commands")
         pid_getters = commands.pid_getters()
         for get in pid_getters:
-            # PID listing commands should sequentially become supported
-            # Mode 1 PID 0 is assumed to always be supported
             if not self.test_cmd(get, warn=False):
                 continue
-
-            # when querying, only use the blocking OBD.query()
-            # prevents problems when query is redefined in a subclass (like Async)
             response = OBD.query(self, get)
-
             if response.is_null():
                 logger.info("No valid data for PID listing command: %s" % get)
                 continue
-
-            # loop through PIDs bit-array
+            if response.value is None:
+                continue
             for i, bit in enumerate(response.value):
                 if bit:
-
                     mode = get.mode
                     pid = get.pid + i + 1
-
                     if commands.has_pid(mode, pid):
-                        self.supported_commands.add(commands[mode][pid])
-
-                    # set support for mode 2 commands
+                        try:
+                            self.supported_commands.add(commands.modes[mode][pid])
+                        except Exception:
+                            pass
                     if mode == 1 and commands.has_pid(2, pid):
-                        self.supported_commands.add(commands[2][pid])
-
+                        try:
+                            self.supported_commands.add(commands.modes[2][pid])
+                        except Exception:
+                            pass
         logger.info("finished querying with %d commands supported" % len(self.supported_commands))
 
     def __set_header(self, header):
         if header == self.__last_header:
+            return
+        if self.interface is None or not hasattr(self.interface, 'send_and_parse'):
+            return
+        # Only ELM-style interfaces need AT SH; skip if custom backend lacks it
+        if self.interface.__class__.__name__ != 'ELM327':
+            self.__last_header = header
             return
         r = self.interface.send_and_parse(b'AT SH ' + header + b' ')
         if not r:
@@ -253,7 +259,7 @@ class OBD(object):
             return False
 
         # mode 06 is only implemented for the CAN protocols
-        if cmd.mode == 6 and self.interface.protocol_id() not in ["6", "7", "8", "9"]:
+        if cmd.mode == 6 and (self.interface is None or self.interface.protocol_id() not in ["6", "7", "8", "9"]):
             if warn:
                 logger.warning("Mode 06 commands are only supported over CAN protocols")
             return False
@@ -278,6 +284,9 @@ class OBD(object):
 
         logger.info("Sending command: %s" % str(cmd))
         cmd_string = self.__build_command_string(cmd)
+        if self.interface is None or not hasattr(self.interface, 'send_and_parse'):
+            logger.warning("Backend interface missing send_and_parse")
+            return OBDResponse()
         messages = self.interface.send_and_parse(cmd_string)
 
         # if we're sending a new command, note it
@@ -288,8 +297,11 @@ class OBD(object):
 
         # if we don't already know how many frames this command returns,
         # log it, so we can specify it next time
-        if cmd not in self.__frame_counts:
-            self.__frame_counts[cmd] = sum([len(m.frames) for m in messages])
+        if cmd not in self.__frame_counts and messages:
+            try:
+                self.__frame_counts[cmd] = sum([len(m.frames) for m in messages if hasattr(m, 'frames')])
+            except Exception:
+                self.__frame_counts[cmd] = 0
 
         if not messages:
             logger.info("No valid OBD Messages returned")
